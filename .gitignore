@@ -1,0 +1,34 @@
+# Environment & Secrets
+.env
+*.env
+
+# Python Virtual Environments & Caches
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Data Lake Storage (Avoid committing large datasets)
+data_lake/silver/*
+!data_lake/silver/.gitkeep
+data_lake/quarantine/*
+!data_lake/quarantine/.gitkeep
+
+# Logs & Temporary Reports
+logs/*.log
+reports/data_quality/*.json
+reports/reconciliation/*.json
+~$*.docx
+test.docx
+scratch/
+
+# IDE & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
