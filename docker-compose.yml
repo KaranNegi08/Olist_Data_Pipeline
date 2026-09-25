@@ -1,0 +1,129 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: olist_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    build: .
+    container_name: olist_airflow_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /opt/airflow
+      JAVA_HOME: /usr/lib/jvm/default-java
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW_CONN_POSTGRES_WAREHOUSE: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://local
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+      - ./spark_jobs:/opt/airflow/spark_jobs
+      - ./src:/opt/airflow/src
+      - ./config:/opt/airflow/config
+      - ./data_lake:/opt/airflow/data_lake
+      - ./sql:/opt/airflow/sql
+      - ./reports:/opt/airflow/reports
+    command: >
+      bash -c " airflow db migrate && airflow users delete --username admin || true && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com "
+
+  airflow-webserver:
+    build: .
+    container_name: olist_airflow_webserver
+    restart: always
+    depends_on:
+      - airflow-init
+    environment:
+      PYTHONPATH: /opt/airflow
+      JAVA_HOME: /usr/lib/jvm/default-java
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW_CONN_POSTGRES_WAREHOUSE: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://local
+    ports:
+      - "8085:8080"
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+      - ./spark_jobs:/opt/airflow/spark_jobs
+      - ./src:/opt/airflow/src
+      - ./config:/opt/airflow/config
+      - ./data_lake:/opt/airflow/data_lake
+      - ./sql:/opt/airflow/sql
+      - ./reports:/opt/airflow/reports
+    command: webserver
+
+  airflow-scheduler:
+    build: .
+    container_name: olist_airflow_scheduler
+    restart: always
+    depends_on:
+      - airflow-init
+    environment:
+      PYTHONPATH: /opt/airflow
+      JAVA_HOME: /usr/lib/jvm/default-java
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW_CONN_POSTGRES_WAREHOUSE: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://local
+    volumes:
+      - airflow_data:/opt/airflow
+      - ./airflow/dags:/opt/airflow/dags
+      - ./spark_jobs:/opt/airflow/spark_jobs
+      - ./src:/opt/airflow/src
+      - ./config:/opt/airflow/config
+      - ./data_lake:/opt/airflow/data_lake
+      - ./sql:/opt/airflow/sql
+      - ./reports:/opt/airflow/reports
+    command: scheduler
+
+  superset:
+    image: apache/superset:4.0.1
+    container_name: olist_superset
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SUPERSET_SECRET_KEY: "${SUPERSET_SECRET_KEY}"
+      SQL_ALCHEMY_DATABASE_URI: "sqlite:////app/superset_home/superset.db"
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset_data:/app/superset_home
+    command: >
+      bash -c " superset db upgrade && (superset fab create-admin --username admin --firstname Admin --lastname User --email admin@example.com --password admin || superset fab reset-password --username admin --password admin) && superset init && /usr/bin/run-server.sh "
+
+volumes:
+  postgres_data:
+  airflow_data:
+  superset_data:
+
