@@ -1,0 +1,28 @@
+tables:
+  customers:
+    file_name: "olist_customers_dataset.csv"
+    business_key: ["customer_id"]
+  orders:
+    file_name: "olist_orders_dataset.csv"
+    business_key: ["order_id"]
+  order_items:
+    file_name: "olist_order_items_dataset.csv"
+    business_key: ["order_id", "order_item_id"]
+  order_payments:
+    file_name: "olist_order_payments_dataset.csv"
+    business_key: ["order_id", "payment_sequential"]
+  order_reviews:
+    file_name: "olist_order_reviews_dataset.csv"
+    business_key: ["review_id", "order_id"]
+  products:
+    file_name: "olist_products_dataset.csv"
+    business_key: ["product_id"]
+  sellers:
+    file_name: "olist_sellers_dataset.csv"
+    business_key: ["seller_id"]
+  geolocation:
+    file_name: "olist_geolocation_dataset.csv"
+    business_key: ["geolocation_zip_code_prefix", "geolocation_lat", "geolocation_lng"]
+  category_translation:
+    file_name: "product_category_name_translation.csv"
+    business_key: ["product_category_name"]
